@@ -254,7 +254,7 @@
         let favorites = [];
         let reports = [];
         
-        // Settings State
+        // Global State (Fetched from Firestore where available)
         let masterFilterEnabled = true;
         let strictWhitelistMode = true; 
         let whitelist = ['Ishay Ribo', 'Avraham Fried', 'Yaakov Shwekey', 'Hanan Ben Ari', 'Benny Friedman', 'Mordechai Shapiro', 'Joey Newcomb', 'Eitan Katz'];
@@ -270,7 +270,7 @@
         const mainGrid = document.getElementById('mainGrid');
         const loader = document.getElementById('loader');
 
-        // Global functions for template callbacks
+        // Global function registration for HTML onclick
         window.handlePlayTrack = (id) => {
             const track = [...results, ...favorites].find(t => t.trackId === id);
             if (!track) return;
@@ -330,10 +330,8 @@
                         const trackName = track.trackName.toLowerCase();
                         const idStr = track.trackId.toString();
 
-                        // Block blacklist terms
                         if (blacklist.some(b => trackArtist.includes(b.toLowerCase()) || trackName.includes(b.toLowerCase()) || idStr === b.toLowerCase())) return false;
 
-                        // Whitelist logic
                         if (strictWhitelistMode) {
                             return whitelist.some(w => trackArtist.includes(w.toLowerCase()) || idStr === w.toLowerCase());
                         }
@@ -430,7 +428,6 @@
                             <i data-lucide="heart" class="w-6 h-6 ${isFav ? 'fill-red-500 text-red-500' : ''}"></i>
                         </button>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-white/5 p-3 rounded-xl border border-white/5">
                             <p class="text-[10px] text-slate-500 uppercase font-bold mb-1 tracking-wider">Genre</p>
@@ -441,9 +438,7 @@
                             <p class="text-xs font-semibold text-white">${releaseYear}</p>
                         </div>
                     </div>
-
                     ${linkButtons}
-
                     <button id="reportActionBtn" class="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
                         <i data-lucide="flag" class="w-4 h-4"></i> Report Inappropriate
                     </button>
@@ -492,17 +487,16 @@
         }
 
         function subscribeToData() {
-            const favRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'library');
-            onSnapshot(favRef, (snap) => {
+            if (!currentUser) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'library'), (snap) => {
                 favorites = snap.docs.map(d => d.data());
                 updateGridUI(); 
-            }, (err) => console.error(err));
+            });
 
-            const repRef = collection(db, 'artifacts', appId, 'public', 'data', 'reports');
-            onSnapshot(repRef, (snap) => {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), (snap) => {
                 reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 updateModerationUI();
-            }, (err) => console.error(err));
+            });
         }
 
         function updateModerationUI() {
@@ -513,7 +507,7 @@
             document.getElementById('reportCount').classList.toggle('hidden', count === 0);
 
             const list = document.getElementById('reportsList');
-            list.innerHTML = reports.length === 0 ? '<div class="text-center py-20 text-slate-600"><i data-lucide="check-circle-2" class="w-10 h-10 mx-auto mb-2 opacity-20"></i><p class="text-sm">No pending reports</p></div>' : '';
+            list.innerHTML = reports.length === 0 ? '<div class="text-center py-20 text-slate-600"><p class="text-sm">No pending reports</p></div>' : '';
             reports.forEach(report => {
                 const item = document.createElement('div');
                 item.className = 'bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4';
@@ -526,8 +520,8 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button class="block-btn p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/40" title="Blacklist and Remove"><i data-lucide="shield-off" class="w-4 h-4"></i></button>
-                        <button class="dismiss-btn p-2 bg-emerald-500/20 text-emerald-500 rounded-lg hover:bg-emerald-500/40" title="Dismiss"><i data-lucide="check" class="w-4 h-4"></i></button>
+                        <button class="block-btn p-2 bg-red-500/20 text-red-500 rounded-lg"><i data-lucide="shield-off" class="w-4 h-4"></i></button>
+                        <button class="dismiss-btn p-2 bg-emerald-500/20 text-emerald-500 rounded-lg"><i data-lucide="check" class="w-4 h-4"></i></button>
                     </div>
                 `;
                 item.querySelector('.dismiss-btn').onclick = () => resolveReport(report.id);
@@ -552,24 +546,22 @@
         }
 
         function renderLists() {
-            // Whitelist
             const wBox = document.getElementById('whitelistBox');
             wBox.innerHTML = '';
             whitelist.forEach((w, i) => {
                 const row = document.createElement('div');
-                row.className = 'flex justify-between items-center p-1.5 hover:bg-emerald-500/10 rounded text-slate-300 transition-colors';
-                row.innerHTML = `<span class="truncate pr-2">${w}</span><button class="text-slate-600 hover:text-red-500 transition-colors"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+                row.className = 'flex justify-between items-center p-1.5 hover:bg-emerald-500/10 rounded text-slate-300';
+                row.innerHTML = `<span>${w}</span><button class="text-slate-600 hover:text-red-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
                 row.querySelector('button').onclick = () => { whitelist.splice(i, 1); renderLists(); performSearch(searchInput.value || 'Ishay Ribo'); };
                 wBox.appendChild(row);
             });
             
-            // Blacklist
             const bBox = document.getElementById('blacklistBox');
             bBox.innerHTML = '';
             blacklist.forEach((b, i) => {
                 const row = document.createElement('div');
-                row.className = 'flex justify-between items-center p-1.5 hover:bg-red-500/10 rounded text-slate-300 transition-colors';
-                row.innerHTML = `<span class="truncate pr-2">${b}</span><button class="text-slate-600 hover:text-red-500 transition-colors"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+                row.className = 'flex justify-between items-center p-1.5 hover:bg-red-500/10 rounded text-slate-300';
+                row.innerHTML = `<span>${b}</span><button class="text-slate-600 hover:text-red-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
                 row.querySelector('button').onclick = () => { blacklist.splice(i, 1); renderLists(); performSearch(searchInput.value || 'Ishay Ribo'); };
                 bBox.appendChild(row);
             });
@@ -577,13 +569,11 @@
         }
 
         async function init() {
-            try {
-                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                    await signInWithCustomToken(auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) { console.error("Auth error", err); }
+            if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                await signInWithCustomToken(auth, window.__initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
 
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
