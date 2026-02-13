@@ -3,620 +3,892 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KosherPreviews - Jewish Music Explorer</title>
+    <meta name="description" content="Jewish Music Preview - The ultimate kosher streaming experience with advanced filtering, whitelist/blacklist controls, and high-quality Jewish tracks.">
+    <meta name="keywords" content="Jewish Music, Kosher Stream, Jewish Radio, Jewish Songs, Whitelist Music, Filtered Music">
+    <meta name="author" content="KosherStream Ultra">
+    <meta property="og:title" content="Jewish Music Preview">
+    <meta property="og:description" content="Stream your favorite Jewish music with total peace of mind.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+    <title>Jewish Music Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #060a12;
-            color: #e2e8f0;
-            overflow-x: hidden;
+        :root {
+            --app-scale: 1;
+            --accent-color: #3b82f6;
         }
-
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            transition: background-color 0.5s ease;
+        }
+        body.theater-mode {
+            background-color: #000000;
+        }
+        body.theater-mode aside, 
+        body.theater-mode header {
+            opacity: 0.1;
+            filter: grayscale(1);
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        body.theater-mode footer {
+            border-top-color: #111;
+        }
+        #app-viewport {
+            transform: scale(var(--app-scale));
+            transform-origin: top left;
+            width: calc(100% / var(--app-scale));
+            height: calc(100% / var(--app-scale));
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-
-        input[type=range] {
-            -webkit-appearance: none;
-            background: #1e293b;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #222;
             border-radius: 10px;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 14px;
-            width: 14px;
+        .visualizer-bar {
+            transition: height 0.08s ease;
+            width: 4px;
+            background: var(--accent-color);
+            margin: 0 1px;
+            border-radius: 2px;
+            height: 4px;
+        }
+        input[type="range"] { accent-color: var(--accent-color); cursor: pointer; }
+        .song-card { transition: all 0.2s ease; }
+        .song-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.05); }
+        .animate-pop { animation: pop 0.3s ease-out; }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .notification-dot {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
             border-radius: 50%;
-            background: #f59e0b;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
-        }
-
-        .glass {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(245, 158, 11, 0.1);
-        }
-
-        .animate-slide-up {
-            animation: slideUp 0.4s ease-out forwards;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .link-chip {
-            @apply flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-[11px] font-bold transition-all hover:bg-white/10 hover:border-amber-500/50;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="app" class="min-h-screen pb-32">
-        <!-- Header -->
-        <header class="sticky top-0 z-40 bg-[#060a12]/90 backdrop-blur-xl border-b border-amber-900/30 p-4">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-4">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
-                    <div class="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-900/40">
-                        <i data-lucide="star" class="text-white fill-white"></i>
+
+    <!-- Startup Size Picker -->
+    <div id="onboarding" class="fixed inset-0 z-[200] bg-black flex items-center justify-center p-6 text-center">
+        <div class="max-w-2xl bg-neutral-900 p-10 rounded-3xl border border-neutral-800 shadow-2xl">
+            <h1 class="text-5xl font-black mb-4 text-blue-500 italic">JEWISH MUSIC PREVIEW</h1>
+            <p class="text-neutral-400 mb-10">Select your optimal display density to begin.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="startup-scales"></div>
+        </div>
+    </div>
+
+    <div id="app-viewport" class="flex flex-col hidden">
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Left Sidebar -->
+            <aside class="w-64 bg-black border-r border-neutral-800 flex flex-col p-6 z-30 transition-all duration-500">
+                <div class="flex items-center gap-3 mb-10">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+                        <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
                     </div>
-                    <div class="leading-tight">
-                        <h1 class="text-xl font-black tracking-tight uppercase">Kosher<span class="text-amber-500">Previews</span></h1>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Music Explorer</p>
-                    </div>
+                    <span class="font-black text-lg tracking-tighter">ULTRA</span>
                 </div>
 
-                <div class="flex-1 max-w-xl flex gap-2 w-full">
-                    <div class="relative flex-1">
-                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4"></i>
-                        <input id="searchInput" type="text" placeholder="Search approved music..." 
-                            class="w-full bg-slate-900 border border-slate-800 rounded-full py-2 pl-10 pr-4 focus:ring-2 focus:ring-amber-500/50 outline-none text-sm text-white">
-                    </div>
-                    <button id="searchBtn" class="bg-amber-600 hover:bg-amber-500 px-6 py-2 rounded-full font-bold text-sm transition-all active:scale-95 text-white">Search</button>
-                </div>
-
-                <div class="flex gap-2">
-                    <button id="tabDiscoverBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-amber-600 text-white"><i data-lucide="compass" class="w-4 h-4"></i> Discover</button>
-                    <button id="tabLibraryBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-white/5"><i data-lucide="library" class="w-4 h-4"></i> Library</button>
-                    <button id="openSettingsBtn" class="relative p-2 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-700/30">
-                        <i data-lucide="settings" class="w-5 h-5"></i>
-                        <span id="reportBadge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[10px] text-white flex items-center justify-center rounded-full border-2 border-[#060a12] font-bold">0</span>
+                <nav class="flex-1 space-y-1">
+                    <button onclick="setView('home')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-white transition">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Home
                     </button>
+                    <button onclick="setView('library')" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-white transition">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/></svg> My Library
+                    </button>
+                    <div class="pt-6 pb-2 px-4 text-[10px] font-bold text-neutral-600 uppercase tracking-widest">Admin</div>
+                    <button onclick="openAdminGate()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-white transition relative">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Dashboard
+                        <div id="admin-notif" class="notification-dot"></div>
+                    </button>
+                    <button onclick="openSettings()" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-neutral-400 hover:bg-neutral-900 hover:text-white transition">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings
+                    </button>
+                </nav>
+
+                <div id="viz-container" class="mt-auto pt-6 border-t border-neutral-800 hidden">
+                    <p class="text-[10px] text-neutral-500 font-bold mb-3 uppercase tracking-widest">Equalizer</p>
+                    <div id="visualizer" class="h-12 flex items-end gap-[1px]"></div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 flex flex-col relative bg-neutral-950">
+                <header class="p-6 flex items-center justify-between sticky top-0 z-20 glass border-b-0 transition-all duration-500">
+                    <div class="relative w-full max-w-lg">
+                        <input id="searchInput" type="text" placeholder="Search Jewish tracks..." class="w-full bg-neutral-900 border border-neutral-800 rounded-full py-3 px-12 text-sm focus:ring-2 focus:ring-blue-500 transition outline-none">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <div id="sleep-status" class="hidden flex items-center gap-2 bg-blue-600/20 text-blue-500 px-3 py-1.5 rounded-full text-[10px] font-bold border border-blue-500/30">
+                            <svg width="12" height="12" fill="currentColor"><path d="M12 7c0 3.86-3.14 7-7 7-1.1 0-2.14-.26-3.07-.71C3.18 13.79 4.5 12.55 4.5 11c0-1.93-1.57-3.5-3.5-3.5-.54 0-1.04.13-1.5.35C.13 6.91 0 5.97 0 5c0-3.86 3.14-7 7-7 3.86 0 7 3.14 7 7-2 0-3.5 1.5-3.5 3.5S12 12 12 12z"/></svg>
+                            <span id="sleep-timer-display">--:--</span>
+                        </div>
+                        <div class="flex items-center gap-2 bg-neutral-900 p-1 rounded-xl border border-neutral-800">
+                            <button onclick="setLayout('grid')" id="lt-grid" class="p-2 rounded-lg bg-neutral-800 text-white transition"><svg width="18" height="18" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z"/></svg></button>
+                            <button onclick="setLayout('list')" id="lt-list" class="p-2 rounded-lg text-neutral-500 hover:text-white transition"><svg width="18" height="18" fill="currentColor"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg></button>
+                        </div>
+                    </div>
+                </header>
+
+                <div id="scrollContent" class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div id="resultsGrid" class="grid gap-6"></div>
+                </div>
+
+                <!-- Toast Notification -->
+                <div id="toast" class="fixed bottom-32 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full font-bold text-sm shadow-2xl transition-all opacity-0 translate-y-4 pointer-events-none z-[150]">
+                    Action Completed
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer Player -->
+        <footer class="h-28 bg-black border-t border-neutral-800 px-8 flex items-center justify-between z-50 transition-all">
+            <div class="flex items-center gap-4 w-1/4">
+                <img id="p-art" src="https://via.placeholder.com/150" class="w-16 h-16 rounded-xl object-cover shadow-2xl border border-neutral-800">
+                <div class="min-w-0">
+                    <h4 id="p-title" class="font-bold text-sm truncate">Ready to stream</h4>
+                    <p id="p-artist" class="text-xs text-neutral-500 truncate">Select a song</p>
                 </div>
             </div>
-        </header>
 
-        <main id="mainGrid" class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        </main>
-
-        <div id="loader" class="hidden flex justify-center py-20"><i data-lucide="loader-2" class="animate-spin w-12 h-12 text-amber-500"></i></div>
-
-        <!-- Player Bar -->
-        <div id="playerBar" class="fixed bottom-0 left-0 right-0 bg-[#0a0f1a]/95 backdrop-blur-3xl border-t border-amber-900/30 p-4 transition-transform translate-y-full z-40">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-6">
-                <div class="flex items-center gap-4 w-full md:w-1/3">
-                    <img id="playerArt" src="" class="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer">
-                    <div class="min-w-0 flex-1">
-                        <p id="playerTitle" class="font-bold text-sm truncate text-white">Song Title</p>
-                        <p id="playerArtist" class="text-xs text-amber-500 truncate">Artist Name</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-col items-center gap-2 flex-1 w-full">
-                    <button id="masterPlayBtn" class="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg active:scale-95">
-                        <i data-lucide="play" class="ml-1 fill-black"></i>
+            <div class="flex flex-col items-center gap-3 flex-1 max-w-2xl px-10">
+                <div class="flex items-center gap-8">
+                    <button onclick="prevSong()" class="text-neutral-500 hover:text-white transition"><svg width="24" height="24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6L18 6v12z"/></svg></button>
+                    <button onclick="togglePlay()" class="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition">
+                        <svg width="24" height="24" fill="currentColor" id="p-icon"><path d="M8 5v14l11-7z"/></svg>
                     </button>
-                    <div class="flex items-center gap-3 w-full max-w-md">
-                        <span id="currentTime" class="text-[10px] text-slate-500 w-8">0:00</span>
-                        <div id="progressContainer" class="flex-1 h-1 bg-slate-800 rounded-full cursor-pointer relative group">
-                            <div id="progressBar" class="absolute h-full bg-amber-500 rounded-full w-0"></div>
-                        </div>
-                        <span id="duration" class="text-[10px] text-slate-500 w-8">0:00</span>
-                    </div>
+                    <button onclick="nextSong()" class="text-neutral-500 hover:text-white transition"><svg width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6zM16 6h2v12h-2z"/></svg></button>
                 </div>
+                <div class="w-full flex items-center gap-4">
+                    <span id="currTime" class="text-[10px] font-mono text-neutral-500 w-10 text-right">0:00</span>
+                    <input id="seekBar" type="range" value="0" step="0.1" class="flex-1 h-1 bg-neutral-800 rounded-full appearance-none">
+                    <span id="totalTime" class="text-[10px] font-mono text-neutral-500 w-10">0:00</span>
+                </div>
+            </div>
 
-                <div class="flex items-center gap-4 w-full md:w-1/3 justify-end">
-                    <i data-lucide="volume-2" class="w-4 h-4 text-slate-500"></i>
-                    <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.7" class="w-24 h-1 cursor-pointer">
+            <div class="flex items-center justify-end gap-6 w-1/4">
+                <div class="flex items-center gap-3">
+                    <svg width="18" height="18" fill="currentColor" class="text-neutral-500"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                    <input id="volBar" type="range" min="0" max="1" step="0.01" value="0.8" class="w-24 h-1 bg-neutral-800 rounded-full appearance-none">
+                </div>
+                <button onclick="toggleTheater()" id="theater-btn" class="text-neutral-500 hover:text-white transition" title="Toggle Theater Mode">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 12h20"/></svg>
+                </button>
+            </div>
+        </footer>
+
+        <!-- MODALS -->
+
+        <!-- Details Modal -->
+        <div id="detailsModal" class="fixed inset-0 z-[100] bg-black/95 hidden animate-pop">
+            <div class="h-full flex flex-col p-10 overflow-y-auto custom-scrollbar">
+                <div class="max-w-5xl mx-auto w-full">
+                    <div class="flex justify-between items-center mb-10">
+                        <span class="text-xs font-bold text-neutral-500 tracking-widest uppercase">Streaming & Platform Links</span>
+                        <button onclick="closeModal('detailsModal')" class="w-12 h-12 bg-neutral-900 border border-neutral-800 rounded-full flex items-center justify-center hover:bg-neutral-800 transition">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="detailsContent"></div>
                 </div>
             </div>
         </div>
 
         <!-- Settings Modal -->
-        <div id="settingsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-                    <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="shield-check" class="text-amber-500"></i> Parental Controls</h2>
-                    <button id="closeSettingsBtn"><i data-lucide="x"></i></button>
+        <div id="settingsModal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden flex items-center justify-center">
+            <div class="bg-neutral-950 border border-neutral-800 w-full max-w-xl rounded-3xl p-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <h2 class="text-3xl font-black mb-8">Settings</h2>
+                <div class="space-y-8">
+                    <section>
+                        <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Application Scale</h4>
+                        <div id="settings-scales" class="grid grid-cols-4 gap-2"></div>
+                    </section>
+                    
+                    <section class="p-6 bg-neutral-900 rounded-2xl border border-neutral-800">
+                        <h4 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Sleep Timer</h4>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setSleepTimer(15)" class="p-3 bg-black border border-neutral-800 rounded-xl hover:bg-blue-600 transition text-xs font-bold">15 Min</button>
+                            <button onclick="setSleepTimer(30)" class="p-3 bg-black border border-neutral-800 rounded-xl hover:bg-blue-600 transition text-xs font-bold">30 Min</button>
+                            <button onclick="setSleepTimer(60)" class="p-3 bg-black border border-neutral-800 rounded-xl hover:bg-blue-600 transition text-xs font-bold">1 Hour</button>
+                            <button onclick="setSleepTimer(0)" class="p-3 bg-red-600/20 text-red-500 border border-red-500/30 rounded-xl hover:bg-red-600 hover:text-white transition text-xs font-bold col-span-3">Cancel Timer</button>
+                        </div>
+                    </section>
+
+                    <section class="flex items-center justify-between p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
+                        <div>
+                            <h4 class="font-bold">Audio Equalizer</h4>
+                            <p class="text-xs text-neutral-500">Enable real-time wave visualization</p>
+                        </div>
+                        <input type="checkbox" id="vizToggle" onchange="toggleVizFeature(this.checked)" class="w-6 h-6 rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-blue-600">
+                    </section>
                 </div>
-                
-                <div id="settingsContent" class="p-6 overflow-y-auto custom-scrollbar">
-                    <div id="lockScreen" class="space-y-6 py-10 text-center">
-                        <i data-lucide="lock" class="w-16 h-16 mx-auto text-slate-700"></i>
-                        <div class="max-w-xs mx-auto space-y-4">
-                            <input id="pinInput" type="password" placeholder="Access Code" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:border-amber-500 outline-none text-white">
-                            <button id="unlockBtn" class="w-full bg-amber-600 py-3 rounded-xl font-bold text-white transition-all active:scale-95">Unlock Settings</button>
-                            <p id="lockErrorMsg" class="text-xs text-red-500 hidden font-bold">Incorrect Access Code</p>
-                        </div>
-                    </div>
-
-                    <div id="adminPanel" class="hidden space-y-6">
-                        <div class="flex border-b border-slate-800">
-                            <button id="adminTabRules" class="px-6 py-3 font-bold text-xs uppercase tracking-widest text-amber-500 border-b-2 border-amber-500">Rules</button>
-                            <button id="adminTabLists" class="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500">Lists</button>
-                            <button id="adminTabReports" class="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500 flex items-center gap-2">Reports <span id="reportCount" class="bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] hidden">0</span></button>
-                            <button id="adminTabSecurity" class="px-6 py-3 font-bold text-xs uppercase tracking-widest text-slate-500">Security</button>
-                        </div>
-
-                        <!-- Admin Sections -->
-                        <div id="rulesSection" class="space-y-6">
-                            <div class="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
-                                <div>
-                                    <h3 class="text-sm font-bold text-white">Master Filter Enable</h3>
-                                    <p class="text-xs text-slate-500">Toggle all protection features on or off</p>
-                                </div>
-                                <button id="masterFilterBtn" class="w-12 h-6 bg-amber-600 rounded-full relative transition-colors">
-                                    <div id="masterFilterCircle" class="absolute left-7 top-1 w-4 h-4 bg-white rounded-full transition-all"></div>
-                                </button>
-                            </div>
-                            <div class="flex items-center justify-between p-4 bg-emerald-600/10 rounded-xl border border-emerald-600/20">
-                                <div>
-                                    <h3 class="text-sm font-bold text-emerald-500">Strict Whitelist Mode</h3>
-                                    <p class="text-xs text-slate-400">Only allow results from the approved artist list</p>
-                                </div>
-                                <button id="strictModeBtn" class="w-12 h-6 bg-emerald-600 rounded-full relative transition-colors">
-                                    <div id="strictModeCircle" class="absolute left-7 top-1 w-4 h-4 bg-white rounded-full transition-all"></div>
-                                </button>
-                            </div>
-                            <div class="flex items-center justify-between p-4 bg-blue-600/10 rounded-xl border border-blue-600/20">
-                                <div>
-                                    <h3 class="text-sm font-bold text-blue-500">External Music Links</h3>
-                                    <p class="text-xs text-slate-400">Show links to Apple Music, Spotify, etc.</p>
-                                </div>
-                                <button id="externalLinksBtn" class="w-12 h-6 bg-amber-600 rounded-full relative transition-colors">
-                                    <div id="externalLinksCircle" class="absolute left-7 top-1 w-4 h-4 bg-white rounded-full transition-all"></div>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="listsSection" class="hidden space-y-6">
-                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-4">
-                                <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-widest">Approved Artists</h3>
-                                <div class="flex gap-2">
-                                    <input id="whitelistInput" type="text" placeholder="Artist Name..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white outline-none">
-                                    <button id="addWhitelistBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Add</button>
-                                </div>
-                                <div id="whitelistBox" class="h-32 bg-slate-900 rounded-lg p-2 overflow-y-auto space-y-1 text-xs custom-scrollbar"></div>
-                            </div>
-                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-4">
-                                <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest">Blocked Keywords</h3>
-                                <div class="flex gap-2">
-                                    <input id="blacklistInput" type="text" placeholder="Word or Song to block..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white outline-none">
-                                    <button id="addBlacklistBtn" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Add</button>
-                                </div>
-                                <div id="blacklistBox" class="h-32 bg-slate-900 rounded-lg p-2 overflow-y-auto space-y-1 text-xs custom-scrollbar"></div>
-                            </div>
-                        </div>
-
-                        <div id="reportsSection" class="hidden">
-                            <div id="reportsList" class="space-y-3"></div>
-                        </div>
-
-                        <div id="securitySection" class="hidden">
-                             <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 space-y-4">
-                                <h3 class="text-sm font-bold text-white">Change Access Code</h3>
-                                <input id="newPinInput" type="password" maxlength="4" placeholder="••••" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-3 text-2xl tracking-[0.5em] text-center text-white outline-none">
-                                <button id="savePinBtn" class="w-full bg-amber-600 py-3 rounded-xl font-bold text-white">Update Code</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button onclick="closeModal('settingsModal')" class="w-full mt-10 bg-white text-black py-4 rounded-2xl font-black hover:scale-[1.02] transition">Close</button>
             </div>
         </div>
 
-        <!-- Details Sidebar -->
-        <div id="detailsSidebar" class="fixed right-0 top-0 bottom-0 w-full md:w-96 bg-slate-950 z-50 border-l border-amber-900/20 p-8 flex flex-col shadow-2xl transition-transform translate-x-full">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="font-black text-amber-500 tracking-tighter uppercase">Track Info</h2>
-                <button id="closeDetailsBtn"><i data-lucide="x"></i></button>
+        <!-- Admin Gate -->
+        <div id="adminGate" class="fixed inset-0 z-[110] bg-black/90 hidden items-center justify-center">
+            <div class="bg-neutral-900 border border-neutral-800 p-10 rounded-3xl w-full max-w-md text-center">
+                <h2 class="text-2xl font-bold mb-6">Master Access</h2>
+                <div id="pinView">
+                    <input id="pinInput" type="password" placeholder="••••" class="w-full bg-black border border-neutral-800 rounded-2xl py-4 text-center text-3xl tracking-widest mb-4 outline-none focus:border-blue-500 transition">
+                    <button onclick="verifyPin()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold mb-4 transition active:scale-95">Unlock</button>
+                    <button onclick="showRecovery()" class="text-sm text-neutral-500 hover:text-white">Forgot Security Code?</button>
+                </div>
+                <div id="recoveryView" class="hidden text-left">
+                    <p id="recQ" class="text-sm font-bold mb-2">Question</p>
+                    <input id="recA" type="text" class="w-full bg-black border border-neutral-800 p-4 rounded-2xl mb-4 text-sm outline-none">
+                    <button onclick="verifyRecovery()" class="w-full bg-green-600 py-4 rounded-2xl font-bold">Recover Access</button>
+                </div>
+                <button onclick="closeModal('adminGate')" class="mt-6 text-neutral-500 hover:text-white text-sm">Cancel</button>
             </div>
-            <div id="detailsContent" class="flex-1 overflow-y-auto custom-scrollbar space-y-8"></div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="adminPanel" class="fixed inset-0 z-[120] bg-black hidden overflow-y-auto custom-scrollbar">
+            <div class="max-w-6xl mx-auto p-12">
+                <div class="flex justify-between items-center mb-16">
+                    <h1 class="text-4xl font-black">Control Center</h1>
+                    <button onclick="closeModal('adminPanel')" class="bg-neutral-900 p-4 rounded-full border border-neutral-800 transition hover:bg-neutral-800"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <!-- Filtering Engine -->
+                    <section class="space-y-6">
+                        <div class="bg-neutral-900 p-8 rounded-3xl border border-neutral-800">
+                            <h3 class="text-xl font-bold mb-6">Filtering Engine</h3>
+                            <p class="text-[10px] text-neutral-500 mb-4 uppercase font-bold tracking-widest">Active Rule: Whitelist + Blacklist Combined</p>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between p-4 bg-black rounded-xl border border-neutral-800 cursor-pointer">
+                                    <span>None (Unfiltered)</span>
+                                    <input type="radio" name="fm" value="none" onchange="updMode(this.value)">
+                                </label>
+                                <label class="flex items-center justify-between p-4 bg-black rounded-xl border border-neutral-800 cursor-pointer">
+                                    <span>Dual (Whitelist + Blacklist)</span>
+                                    <input type="radio" name="fm" value="dual" onchange="updMode(this.value)">
+                                </label>
+                            </div>
+                            
+                            <div class="mt-8">
+                                <h4 class="text-xs font-bold text-neutral-500 mb-3 uppercase tracking-widest">Manage Lists</h4>
+                                <div class="flex gap-1 mb-2">
+                                    <button onclick="setListType('white')" id="btn-list-white" class="flex-1 py-2 bg-blue-600 rounded-lg text-[10px] font-black">WHITELIST</button>
+                                    <button onclick="setListType('black')" id="btn-list-black" class="flex-1 py-2 bg-neutral-800 rounded-lg text-[10px] font-black">BLACKLIST</button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input id="artIn" type="text" placeholder="Artist/Word" class="flex-1 bg-black border border-neutral-800 p-3 rounded-xl text-sm">
+                                    <button onclick="addArt()" class="bg-blue-600 px-4 rounded-xl font-bold text-sm">Add</button>
+                                </div>
+                                <div id="artList" class="mt-4 space-y-2 h-48 overflow-y-auto pr-2 custom-scrollbar"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Reports System -->
+                    <section class="lg:col-span-2 space-y-6">
+                        <div class="bg-neutral-900 p-8 rounded-3xl border border-neutral-800">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold">User Reports</h3>
+                                <span id="report-count" class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-black">0 PENDING</span>
+                            </div>
+                            <div id="reportList" class="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                <p class="text-neutral-500 text-sm italic">No active reports found.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <section class="bg-neutral-900 p-8 rounded-3xl border border-neutral-800">
+                        <h3 class="text-xl font-bold mb-6">Environment Settings</h3>
+                        <label class="flex items-center justify-between p-4 bg-black rounded-xl border border-neutral-800 mb-4 cursor-pointer">
+                            <span>Enable Global External Links</span>
+                            <input type="checkbox" id="linksToggle" onchange="updLinks(this.checked)">
+                        </label>
+                        <div class="space-y-4 pt-6 border-t border-neutral-800">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-neutral-500 uppercase">Master PIN</label>
+                                    <input id="nPin" type="password" placeholder="Change PIN" class="w-full bg-black border border-neutral-800 p-3 rounded-xl text-sm mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-neutral-500 uppercase">Question</label>
+                                    <input id="nQuest" type="text" placeholder="Recovery Q" class="w-full bg-black border border-neutral-800 p-3 rounded-xl text-sm mt-1">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="text-[10px] font-bold text-neutral-500 uppercase">Secret Answer</label>
+                                    <input id="nAns" type="password" placeholder="Secret Answer" class="w-full bg-black border border-neutral-800 p-3 rounded-xl text-sm mt-1">
+                                </div>
+                            </div>
+                            <button onclick="saveSec()" class="w-full bg-white text-black py-4 rounded-xl font-black transition hover:scale-[1.01]">Update Security Credentials</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // CONFIG
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kosher-previews';
-        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let db, auth, user;
-        
-        let masterFilterEnabled = true;
-        let strictWhitelistMode = true;
-        let showExternalLinks = true;
-        let adminPin = '1234';
-        
-        let whitelist = ['Ishay Ribo', 'Avraham Fried', 'Yaakov Shwekey', 'Hanan Ben Ari', 'Benny Friedman', 'Mordechai Shapiro', 'Joey Newcomb', 'Eitan Katz', 'Shmuel', 'Simcha Leiner', 'Beri Weber', 'Lipa Schmeltzer'];
-        let blacklist = ['Christmas', 'Jesus', 'Church', 'Cross', 'Gospel', 'Saint', 'Spirit', 'Holiday', 'Tree'];
-        
-        let favorites = [];
-        let reports = [];
-        const audio = new Audio();
-        let currentTrack = null;
+    <script>
+        // --- System State ---
+        let currentSongs = [];
+        let library = JSON.parse(localStorage.getItem('ks_lib') || '[]');
+        let reports = JSON.parse(localStorage.getItem('ks_reports') || '[]');
+        let currentIndex = -1;
         let isPlaying = false;
-        let results = [];
-        let activeTab = 'discover';
+        let view = 'home';
+        let layout = 'grid';
+        let activeAdminList = 'white';
+        let sleepTimerId = null;
+        let sleepSecondsLeft = 0;
+        let audioCtx, analyser, dataArray, source;
+        const audio = new Audio();
+        audio.crossOrigin = "anonymous";
 
-        async function init() {
-            if (firebaseConfig.projectId) {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
+        const SCALES = [
+            { name: 'Tiny', val: 0.5 }, { name: 'Compact', val: 0.65 }, { name: 'Small', val: 0.8 },
+            { name: 'Normal', val: 1.0 }, { name: 'Large', val: 1.2 }, { name: 'Wide', val: 1.4 },
+            { name: 'Ultra', val: 1.7 }, { name: 'TV/Cinema', val: 2.2 }
+        ];
 
-                const initAuth = async () => {
-                    if (initialToken) await signInWithCustomToken(auth, initialToken);
-                    else await signInAnonymously(auth);
-                };
-                await initAuth();
+        let admin = JSON.parse(localStorage.getItem('ks_adm') || JSON.stringify({
+            pin: '1234',
+            q: 'Admin Color?',
+            a: 'blue',
+            mode: 'dual',
+            white: ['Abie Rotenberg', 'Mordechai Shapiro', 'MBD', 'Joey Newcomb', 'Ishay Ribo', 'Shmuel', 'Yitzchak Meir Helfgot'],
+            black: [],
+            links: true,
+            viz: true
+        }));
 
-                onAuthStateChanged(auth, (u) => {
-                    user = u;
-                    if (user) setupFirebaseListeners();
+        // --- Initialization ---
+        window.onload = () => {
+            const hasStarted = localStorage.getItem('ks_started');
+            renderScaleButtons('startup-scales');
+            renderScaleButtons('settings-scales');
+            checkNotifs();
+            
+            if (!hasStarted) {
+                document.getElementById('onboarding').style.display = 'flex';
+            } else {
+                setAppScale(parseFloat(localStorage.getItem('ks_scale') || '1'));
+            }
+        };
+
+        function renderScaleButtons(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = SCALES.map(s => `
+                <button onclick="setAppScale(${s.val})" class="p-3 border border-neutral-800 rounded-xl hover:bg-blue-600 transition text-xs font-bold">${s.name}</button>
+            `).join('');
+        }
+
+        function setAppScale(scale) {
+            document.documentElement.style.setProperty('--app-scale', scale);
+            localStorage.setItem('ks_scale', scale);
+            localStorage.setItem('ks_started', 'true');
+            document.getElementById('onboarding').style.display = 'none';
+            document.getElementById('app-viewport').classList.remove('hidden');
+            initApp();
+        }
+
+        function initApp() {
+            renderMusic('Jewish Music');
+            setupSearch();
+            setupAudio();
+            if(admin.viz) initVisualizer();
+        }
+
+        // --- Core UI Logic ---
+
+        function setupSearch() {
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') renderMusic(e.target.value);
+            });
+        }
+
+        async function renderMusic(q) {
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = '<div class="col-span-full py-20 text-center text-neutral-500 animate-pulse font-bold">SCANNING ARCHIVES...</div>';
+            
+            try {
+                const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=100`);
+                const data = await res.json();
+                
+                currentSongs = data.results.filter(t => {
+                    const art = t.artistName.toLowerCase();
+                    const track = t.trackName.toLowerCase();
+                    
+                    if (admin.mode === 'none') return true;
+                    if (admin.mode === 'dual') {
+                        // Must be in Whitelist AND NOT in Blacklist
+                        const isWhitelisted = admin.white.some(w => art.includes(w.toLowerCase()));
+                        const isBlacklisted = admin.black.some(b => art.includes(b.toLowerCase()) || track.includes(b.toLowerCase()));
+                        return isWhitelisted && !isBlacklisted;
+                    }
+                    return true;
                 });
+
+                displaySongs();
+            } catch (err) {
+                grid.innerHTML = '<p class="col-span-full text-center text-red-500">Service unreachable.</p>';
+            }
+        }
+
+        function displaySongs() {
+            const grid = document.getElementById('resultsGrid');
+            grid.className = layout === 'grid' 
+                ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" 
+                : "flex flex-col gap-2";
+
+            grid.innerHTML = currentSongs.map((s, idx) => {
+                const isLib = library.some(x => x.trackId === s.trackId);
+                const artwork = s.artworkUrl100.replace('100x100','600x600');
+                
+                if (layout === 'grid') {
+                    return `
+                        <div onclick="playSong(${idx})" class="song-card bg-neutral-900 p-4 rounded-3xl border border-neutral-800 cursor-pointer animate-pop relative">
+                            <div class="aspect-square mb-4 rounded-2xl overflow-hidden relative group">
+                                <img src="${artwork}" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                    <div class="p-4 bg-white text-black rounded-full shadow-xl"><svg width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-sm truncate">${s.trackName}</h3>
+                            <p class="text-xs text-neutral-500 truncate mb-4">${s.artistName}</p>
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-2">
+                                    <button onclick="event.stopPropagation(); toggleLib(${idx})" class="${isLib ? 'text-red-500' : 'text-neutral-700'} hover:scale-110 transition"><svg width="18" height="18" fill="${isLib ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></button>
+                                    <button onclick="event.stopPropagation(); reportSong(${idx})" class="text-neutral-700 hover:text-red-400 transition" title="Report Song"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1v12zM4 22v-7"/></svg></button>
+                                </div>
+                                <button onclick="event.stopPropagation(); showDetails(${idx})" class="text-[10px] font-black text-neutral-600 uppercase tracking-tighter hover:text-white transition">Links & Info</button>
+                            </div>
+                        </div>`;
+                } else {
+                    return `
+                        <div onclick="playSong(${idx})" class="flex items-center gap-4 p-3 bg-neutral-900/40 rounded-2xl border border-neutral-800 hover:bg-neutral-800 transition cursor-pointer">
+                            <img src="${s.artworkUrl100}" class="w-12 h-12 rounded-lg">
+                            <div class="flex-1 min-w-0"><h4 class="text-sm font-bold truncate">${s.trackName}</h4><p class="text-xs text-neutral-500 truncate">${s.artistName}</p></div>
+                            <div class="flex gap-4">
+                                <button onclick="event.stopPropagation(); reportSong(${idx})" class="text-neutral-600 hover:text-red-400" title="Report"><svg width="18" height="18" fill="none" stroke="currentColor"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1v12zM4 22v-7"/></svg></button>
+                                <button onclick="event.stopPropagation(); toggleLib(${idx})" class="${isLib ? 'text-red-500' : 'text-neutral-700'}"><svg width="18" height="18" fill="${isLib ? 'currentColor' : 'none'}" stroke="currentColor"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></button>
+                                <button onclick="event.stopPropagation(); showDetails(${idx})" class="p-2 text-neutral-500 hover:text-white"><svg width="20" height="20" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>
+                            </div>
+                        </div>`;
+                }
+            }).join('');
+        }
+
+        // --- Audio Context & Visualization ---
+
+        function setupAudio() {
+            const seek = document.getElementById('seekBar');
+            const vol = document.getElementById('volBar');
+            
+            audio.ontimeupdate = () => {
+                const p = (audio.currentTime / audio.duration) * 100;
+                seek.value = p || 0;
+                document.getElementById('currTime').innerText = fmt(audio.currentTime);
+                document.getElementById('totalTime').innerText = fmt(audio.duration);
+            };
+
+            seek.oninput = () => audio.currentTime = (seek.value / 100) * audio.duration;
+            vol.oninput = () => audio.volume = vol.value;
+            audio.onended = () => nextSong();
+        }
+
+        function initVisualizer() {
+            const viz = document.getElementById('visualizer');
+            const cont = document.getElementById('viz-container');
+            cont.classList.remove('hidden');
+            viz.innerHTML = '';
+            for(let i=0; i<32; i++) {
+                const b = document.createElement('div');
+                b.className = 'visualizer-bar';
+                viz.appendChild(b);
             }
 
-            performSearch('Ishay Ribo');
-            lucide.createIcons();
-            renderLists();
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                source = audioCtx.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                analyser.fftSize = 64;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            }
+
+            function frame() {
+                requestAnimationFrame(frame);
+                if (!isPlaying) return;
+                analyser.getByteFrequencyData(dataArray);
+                const bars = document.querySelectorAll('.visualizer-bar');
+                bars.forEach((b, i) => {
+                    const h = (dataArray[i] / 255) * 44;
+                    b.style.height = `${Math.max(4, h)}px`;
+                });
+            }
+            frame();
         }
 
-        function setupFirebaseListeners() {
-            if (!user || !db) return;
-
-            onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'library'), (snap) => {
-                favorites = snap.docs.map(d => d.data());
-                if (activeTab === 'library') renderGrid(favorites);
-            });
-
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), (snap) => {
-                reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                updateReportUI();
-                renderReports();
-            });
+        function playSong(i) {
+            if (i === currentIndex) return togglePlay();
+            currentIndex = i;
+            const s = currentSongs[i];
+            audio.src = s.previewUrl;
+            audio.play();
+            isPlaying = true;
+            if (audioCtx?.state === 'suspended') audioCtx.resume();
+            updPlayer();
         }
 
-        function updateReportUI() {
-            const badge = document.getElementById('reportBadge');
-            const countText = document.getElementById('reportCount');
-            badge.innerText = reports.length;
-            countText.innerText = reports.length;
-            badge.classList.toggle('hidden', reports.length === 0);
-            countText.classList.toggle('hidden', reports.length === 0);
+        function togglePlay() {
+            if (!audio.src) return;
+            isPlaying ? audio.pause() : audio.play();
+            isPlaying = !isPlaying;
+            updPlayer();
         }
 
-        async function performSearch(term) {
-            if (!term) return;
-            document.getElementById('loader').classList.remove('hidden');
-            if (activeTab === 'discover') document.getElementById('mainGrid').innerHTML = '';
-            
-            const callbackName = 'itunesCallback_' + Math.floor(Math.random() * 1000000);
-            return new Promise((resolve) => {
-                window[callbackName] = (data) => {
-                    delete window[callbackName];
-                    results = data.results.filter(track => {
-                        if (!masterFilterEnabled) return true;
-                        const artist = track.artistName.toLowerCase();
-                        const name = track.trackName.toLowerCase();
-                        const album = (track.collectionName || "").toLowerCase();
-                        
-                        // Check blacklist
-                        const isBlacklisted = blacklist.some(b => 
-                            artist.includes(b.toLowerCase()) || 
-                            name.includes(b.toLowerCase()) || 
-                            album.includes(b.toLowerCase())
-                        );
-                        if (isBlacklisted) return false;
-
-                        // Check strict mode
-                        if (strictWhitelistMode) {
-                            return whitelist.some(w => artist.includes(w.toLowerCase()));
-                        }
-                        return true;
-                    });
-                    if (activeTab === 'discover') renderGrid(results);
-                    document.getElementById('loader').classList.add('hidden');
-                    resolve();
-                };
-                const script = document.createElement('script');
-                script.src = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50&callback=${callbackName}`;
-                document.body.appendChild(script);
-            });
+        function updPlayer() {
+            const s = currentSongs[currentIndex];
+            if (!s) return;
+            document.getElementById('p-art').src = s.artworkUrl100;
+            document.getElementById('p-title').innerText = s.trackName;
+            document.getElementById('p-artist').innerText = s.artistName;
+            document.getElementById('p-icon').innerHTML = isPlaying ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
         }
 
-        function renderGrid(tracks) {
-            const grid = document.getElementById('mainGrid');
-            grid.innerHTML = '';
-            
-            if (tracks.length === 0) {
-                grid.innerHTML = `<div class="col-span-full py-20 text-center space-y-4"><i data-lucide="music" class="w-12 h-12 mx-auto text-slate-800"></i><p class="text-slate-500 text-sm font-medium">No kosher results found.</p></div>`;
-                lucide.createIcons();
+        // --- Sleep Timer ---
+        function setSleepTimer(mins) {
+            if (sleepTimerId) clearInterval(sleepTimerId);
+            const status = document.getElementById('sleep-status');
+            const display = document.getElementById('sleep-timer-display');
+
+            if (mins === 0) {
+                status.classList.add('hidden');
+                showToast("Sleep Timer Cancelled");
                 return;
             }
 
-            tracks.forEach((track, index) => {
-                const isCurrent = currentTrack?.trackId === track.trackId;
-                const card = document.createElement('div');
-                card.className = 'glass rounded-xl overflow-hidden group animate-slide-up relative';
-                card.style.animationDelay = `${index * 0.05}s`;
-                card.innerHTML = `
-                    <div class="relative aspect-square cursor-pointer overflow-hidden" onclick="window.handleShowDetails(${track.trackId})">
-                        <img src="${track.artworkUrl100.replace('100x100', '400x400')}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                             <div class="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                                <i data-lucide="info" class="w-6 h-6 text-white"></i>
-                             </div>
-                        </div>
-                    </div>
-                    <div class="p-4 relative">
-                        <div class="pr-8">
-                            <p class="font-bold text-xs truncate text-white uppercase tracking-tight">${track.trackName}</p>
-                            <p class="text-[10px] text-amber-500 truncate font-bold uppercase mt-0.5">${track.artistName}</p>
-                        </div>
-                        <button onclick="window.handlePlayTrack(${track.trackId})" class="absolute right-3 top-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-amber-500 transition-colors">
-                            <i data-lucide="${isCurrent && isPlaying ? 'pause' : 'play'}" class="w-4 h-4 ${isCurrent && isPlaying ? 'fill-white text-white' : 'text-slate-400'}"></i>
-                        </button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-            lucide.createIcons();
+            sleepSecondsLeft = mins * 60;
+            status.classList.remove('hidden');
+            showToast(`Sleep Timer set for ${mins} minutes`);
+
+            sleepTimerId = setInterval(() => {
+                sleepSecondsLeft--;
+                const m = Math.floor(sleepSecondsLeft / 60);
+                const s = sleepSecondsLeft % 60;
+                display.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+                if (sleepSecondsLeft <= 0) {
+                    clearInterval(sleepTimerId);
+                    if (isPlaying) togglePlay();
+                    status.classList.add('hidden');
+                    showToast("Sleep Timer Finished - Music Stopped");
+                }
+            }, 1000);
         }
 
-        window.handlePlayTrack = (id) => {
-            const track = [...results, ...favorites].find(t => t.trackId === id);
-            if (!track) return;
-            if (currentTrack?.trackId === id) {
-                if (isPlaying) { audio.pause(); isPlaying = false; }
-                else { audio.play(); isPlaying = true; }
-            } else {
-                currentTrack = track;
-                audio.src = track.previewUrl;
-                audio.play();
-                isPlaying = true;
-                document.getElementById('playerBar').classList.remove('translate-y-full');
-                document.getElementById('playerArt').src = track.artworkUrl100;
-                document.getElementById('playerTitle').innerText = track.trackName;
-                document.getElementById('playerArtist').innerText = track.artistName;
-            }
-            updatePlayerUI();
-            renderGrid(activeTab === 'discover' ? results : favorites);
-        };
+        // --- Details & Modals ---
 
-        window.handleShowDetails = (id) => {
-            const track = [...results, ...favorites].find(t => t.trackId === id);
-            if (!track) return;
-            renderTrackDetails(track);
-            document.getElementById('detailsSidebar').classList.remove('translate-x-full');
-        };
-
-        window.handleToggleFav = async (id) => {
-            const track = [...results, ...favorites].find(t => t.trackId === id);
-            const isFav = favorites.some(f => f.trackId === id);
-            if (db && user) {
-                const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'library', id.toString());
-                if (isFav) await deleteDoc(ref);
-                else await setDoc(ref, { ...track, addedAt: Date.now() });
-            }
-        };
-
-        window.handleReport = async (id) => {
-            const track = [...results, ...favorites].find(t => t.trackId === id);
-            if (!db || !user || !track) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), {
-                trackId: id, trackName: track.trackName, artistName: track.artistName, reportedAt: Date.now(), reporter: user.uid
-            });
-            renderTrackDetails(track);
-        };
-
-        // NEW: Direct Block from Reports Panel
-        window.handleBlockTrack = async (reportId, trackName) => {
-            if (!blacklist.includes(trackName)) {
-                blacklist.push(trackName);
-                renderLists();
-                performSearch(document.getElementById('searchInput').value || 'Ishay Ribo');
-            }
-            if (db) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', reportId));
-        };
-
-        window.handleRemoveReport = async (reportId) => {
-            if (db) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', reportId));
-        };
-
-        function renderTrackDetails(track) {
-            const isFav = favorites.some(f => f.trackId === track.trackId);
-            const isReported = reports.some(r => r.trackId === track.trackId);
-            const container = document.getElementById('detailsContent');
+        function showDetails(i) {
+            const s = currentSongs[i];
+            const modal = document.getElementById('detailsModal');
+            const target = document.getElementById('detailsContent');
+            modal.classList.remove('hidden');
             
-            // Re-adding the full links section
-            let linksHtml = showExternalLinks ? `
-                <div class="space-y-3 pt-4 border-t border-white/5">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Listen Full Version</p>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="${track.trackViewUrl}" target="_blank" class="link-chip"><i data-lucide="music" class="w-3 h-3 text-pink-500"></i> Apple Music</a>
-                        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(track.artistName + ' ' + track.trackName)}" target="_blank" class="link-chip"><i data-lucide="youtube" class="w-3 h-3 text-red-500"></i> YouTube</a>
-                    </div>
-                </div>` : '';
+            const q = encodeURIComponent(`${s.artistName} ${s.trackName}`);
+            const links = admin.links ? `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
+                    <a href="https://youtube.com/results?search_query=${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-red-500 transition flex items-center justify-between">YouTube <svg width="14" height="14" fill="currentColor"><path d="M10 15V6l7 4.5z"/></svg></a>
+                    <a href="https://music.apple.com/search?term=${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-pink-500 transition flex items-center justify-between">Apple Music</a>
+                    <a href="https://music.youtube.com/search?q=${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-red-600 transition flex items-center justify-between">YouTube Music</a>
+                    <a href="https://www.amazon.com/s?k=${q}&i=digital-music" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-orange-400 transition flex items-center justify-between">Amazon Music</a>
+                    <a href="https://open.spotify.com/search/${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-green-500 transition flex items-center justify-between">Spotify</a>
+                    <a href="https://soundcloud.com/search?q=${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-orange-600 transition flex items-center justify-between">SoundCloud</a>
+                    <a href="https://mostlymusic.com/search?q=${q}" target="_blank" class="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 hover:border-blue-500 transition flex items-center justify-between">Mostly Music</a>
+                    <a href="https://www.google.com/search?q=${q}+lyrics" target="_blank" class="p-4 bg-blue-600 rounded-2xl font-bold flex items-center justify-center gap-2 transition hover:scale-[1.02]">Google Lyrics Search</a>
+                </div>` : '<p class="mt-8 text-neutral-500 italic">External links disabled by Admin.</p>';
 
-            container.innerHTML = `
-                <img src="${track.artworkUrl100.replace('100x100', '600x600')}" class="w-full rounded-2xl shadow-2xl border border-white/10">
-                <div class="space-y-4">
-                    <div>
-                        <h3 class="text-2xl font-black text-white uppercase tracking-tighter">${track.trackName}</h3>
-                        <p class="text-amber-500 font-bold uppercase text-xs tracking-widest">${track.artistName}</p>
+            target.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-12">
+                    <img src="${s.artworkUrl100.replace('100x100','800x800')}" class="w-full md:w-96 rounded-3xl shadow-2xl">
+                    <div class="flex-1">
+                        <h2 class="text-6xl font-black mb-2 leading-tight">${s.trackName}</h2>
+                        <p class="text-2xl text-blue-500 mb-8">${s.artistName}</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 bg-neutral-900 rounded-2xl">
+                                <label class="text-[10px] uppercase text-neutral-500 font-black">Album</label>
+                                <p class="truncate font-bold">${s.collectionName}</p>
+                            </div>
+                            <div class="p-4 bg-neutral-900 rounded-2xl">
+                                <label class="text-[10px] uppercase text-neutral-500 font-black">Genre</label>
+                                <p class="font-bold">${s.primaryGenreName}</p>
+                            </div>
+                        </div>
+                        ${links}
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.handleToggleFav(${track.trackId})" class="flex-1 py-4 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center gap-3">
-                            <i data-lucide="heart" class="w-5 h-5 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-400'}"></i>
-                            <span class="text-xs font-black uppercase tracking-widest">${isFav ? 'In Library' : 'Save Track'}</span>
-                        </button>
-                        <button onclick="window.handleReport(${track.trackId})" class="px-4 py-4 ${isReported ? 'bg-red-500 text-white' : 'bg-red-500/10 text-red-500'} rounded-xl border border-red-500/20">
-                            <i data-lucide="${isReported ? 'check' : 'flag'}" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                    ${linksHtml}
                 </div>`;
-            lucide.createIcons();
         }
 
-        function updatePlayerUI() {
-            document.getElementById('masterPlayBtn').innerHTML = `<i data-lucide="${isPlaying ? 'pause' : 'play'}" class="fill-black w-6 h-6"></i>`;
-            lucide.createIcons();
+        // --- Admin & Security ---
+
+        function openAdminGate() {
+            document.getElementById('adminGate').classList.remove('hidden');
+            document.getElementById('adminGate').classList.add('flex');
+            document.getElementById('pinView').classList.remove('hidden');
+            document.getElementById('recoveryView').classList.add('hidden');
         }
 
-        function renderLists() {
-            const render = (items, boxId, listName) => {
-                document.getElementById(boxId).innerHTML = items.map((item, i) => `
-                    <div class="flex justify-between items-center p-2 bg-slate-800/50 rounded group">
-                        <span class="truncate pr-2">${item}</span>
-                        <button onclick="window.removeFromList('${listName}', ${i})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+        function verifyPin() {
+            const p = document.getElementById('pinInput').value;
+            if (p === admin.pin) {
+                closeModal('adminGate');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                document.getElementById('pinInput').value = '';
+                renderAdmin();
+            } else alert("Access Denied.");
+        }
+
+        function showRecovery() {
+            document.getElementById('pinView').classList.add('hidden');
+            document.getElementById('recoveryView').classList.remove('hidden');
+            document.getElementById('recQ').innerText = admin.q;
+        }
+
+        function verifyRecovery() {
+            const a = document.getElementById('recA').value;
+            if (a.toLowerCase() === admin.a.toLowerCase()) {
+                alert(`Security Code Found: ${admin.pin}`);
+                closeModal('adminGate');
+            } else alert("Recovery Failed.");
+        }
+
+        function setListType(type) {
+            activeAdminList = type;
+            document.getElementById('btn-list-white').className = type === 'white' ? 'flex-1 py-2 bg-blue-600 rounded-lg text-[10px] font-black' : 'flex-1 py-2 bg-neutral-800 rounded-lg text-[10px] font-black';
+            document.getElementById('btn-list-black').className = type === 'black' ? 'flex-1 py-2 bg-red-600 rounded-lg text-[10px] font-black' : 'flex-1 py-2 bg-neutral-800 rounded-lg text-[10px] font-black';
+            renderAdmin();
+        }
+
+        function renderAdmin() {
+            const list = document.getElementById('artList');
+            const data = activeAdminList === 'white' ? admin.white : admin.black;
+            
+            list.innerHTML = (admin.mode === 'none' && activeAdminList === 'white') 
+                ? '<p class="text-xs text-neutral-600 italic">Filter is disabled. Whitelist ignored.</p>'
+                : data.map(n => `
+                    <div class="flex items-center justify-between p-3 bg-black rounded-xl border border-neutral-800">
+                        <span class="text-sm font-bold">${n}</span>
+                        <button onclick="remArt('${n}')" class="text-red-500 font-black px-2 text-lg hover:scale-125 transition">×</button>
                     </div>`).join('');
-            };
-            render(whitelist, 'whitelistBox', 'whitelist');
-            render(blacklist, 'blacklistBox', 'blacklist');
-            lucide.createIcons();
-        }
 
-        window.removeFromList = (listName, index) => {
-            if (listName === 'whitelist') whitelist.splice(index, 1);
-            else blacklist.splice(index, 1);
-            renderLists();
-            performSearch(document.getElementById('searchInput').value || 'Ishay Ribo');
-        };
+            document.getElementById('linksToggle').checked = admin.links;
+            document.getElementById('nQuest').value = admin.q;
+            document.querySelectorAll(`input[name="fm"]`).forEach(r => {
+                if(r.value === admin.mode) r.checked = true;
+            });
+
+            renderReports();
+        }
 
         function renderReports() {
-            const list = document.getElementById('reportsList');
+            const list = document.getElementById('reportList');
+            const count = document.getElementById('report-count');
+            count.innerText = `${reports.length} PENDING`;
+            
             if (reports.length === 0) {
-                list.innerHTML = '<p class="text-slate-500 text-xs text-center py-10">No pending reports.</p>';
+                list.innerHTML = '<p class="text-neutral-500 text-sm italic">No active reports found.</p>';
                 return;
             }
-            list.innerHTML = reports.map(r => `
-                <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-4">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-bold text-white truncate">${r.trackName}</p>
-                        <p class="text-[10px] text-amber-500 truncate">${r.artistName}</p>
+
+            list.innerHTML = reports.map((r, idx) => `
+                <div class="bg-black p-6 rounded-2xl border border-neutral-800 flex items-start justify-between gap-6 animate-pop">
+                    <div class="flex gap-4">
+                        <img src="${r.art}" class="w-16 h-16 rounded-xl">
+                        <div>
+                            <h4 class="font-bold text-white">${r.track}</h4>
+                            <p class="text-xs text-blue-500 mb-2">${r.artist}</p>
+                            <p class="text-[10px] text-neutral-500">Reported on ${r.date}</p>
+                        </div>
                     </div>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="window.handleBlockTrack('${r.id}', '${r.trackName}')" class="text-[10px] font-bold text-white uppercase bg-red-600 px-3 py-1.5 rounded hover:bg-red-500 transition-colors">Block</button>
-                        <button onclick="window.handleRemoveReport('${r.id}')" class="text-[10px] font-bold text-slate-400 uppercase bg-white/5 px-3 py-1.5 rounded hover:bg-white/10 transition-colors">Dismiss</button>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="adminAction('block_track', ${idx})" class="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg font-bold hover:bg-red-600 hover:text-white transition">BLOCK TRACK</button>
+                        <button onclick="adminAction('block_artist', ${idx})" class="text-[10px] bg-orange-600/20 text-orange-500 border border-orange-500/30 px-3 py-2 rounded-lg font-bold hover:bg-orange-600 hover:text-white transition">BLOCK ARTIST</button>
+                        <button onclick="adminAction('dismiss', ${idx})" class="text-[10px] bg-neutral-800 text-neutral-400 px-3 py-2 rounded-lg font-bold hover:bg-neutral-700 hover:text-white transition">DISMISS</button>
                     </div>
-                </div>`).join('');
+                </div>
+            `).join('');
         }
 
-        // Global Event Listeners
-        audio.ontimeupdate = () => {
-            const progress = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-            document.getElementById('currentTime').innerText = formatTime(audio.currentTime);
-            document.getElementById('duration').innerText = formatTime(audio.duration || 0);
-        };
-        const formatTime = (s) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-
-        document.getElementById('searchBtn').onclick = () => performSearch(document.getElementById('searchInput').value);
-        document.getElementById('searchInput').onkeypress = (e) => { if(e.key==='Enter') performSearch(e.target.value); };
-        
-        document.getElementById('tabDiscoverBtn').onclick = () => {
-            activeTab = 'discover';
-            document.getElementById('tabDiscoverBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-amber-600 text-white';
-            document.getElementById('tabLibraryBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-white/5';
-            renderGrid(results);
-        };
-        document.getElementById('tabLibraryBtn').onclick = () => {
-            activeTab = 'library';
-            document.getElementById('tabLibraryBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-amber-600 text-white';
-            document.getElementById('tabDiscoverBtn').className = 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-white/5';
-            renderGrid(favorites);
-        };
-
-        document.getElementById('unlockBtn').onclick = () => {
-            if (document.getElementById('pinInput').value === adminPin) {
-                document.getElementById('lockScreen').classList.add('hidden');
-                document.getElementById('adminPanel').classList.remove('hidden');
-            } else {
-                document.getElementById('lockErrorMsg').classList.remove('hidden');
+        function adminAction(type, idx) {
+            const r = reports[idx];
+            if (type === 'block_track') {
+                admin.black.push(r.track);
+            } else if (type === 'block_artist') {
+                admin.black.push(r.artist);
             }
-        };
+            reports.splice(idx, 1);
+            localStorage.setItem('ks_reports', JSON.stringify(reports));
+            save();
+            renderAdmin();
+            checkNotifs();
+            renderMusic('Jewish Music');
+        }
 
-        // Modal navigation
-        ['Rules', 'Lists', 'Reports', 'Security'].forEach(tab => {
-            document.getElementById(`adminTab${tab}`).onclick = () => {
-                ['rules', 'lists', 'reports', 'security'].forEach(s => {
-                    document.getElementById(`${s}Section`).classList.add('hidden');
-                    document.getElementById(`adminTab${s.charAt(0).toUpperCase()+s.slice(1)}`).className = 'px-6 py-3 font-bold text-xs uppercase text-slate-500';
-                });
-                document.getElementById(`${tab.toLowerCase()}Section`).classList.remove('hidden');
-                document.getElementById(`adminTab${tab}`).className = 'px-6 py-3 font-bold text-xs uppercase text-amber-500 border-b-2 border-amber-500';
-            };
-        });
+        function reportSong(idx) {
+            const s = currentSongs[idx];
+            const exists = reports.some(r => r.id === s.trackId);
+            if (exists) return showToast("Already Reported");
 
-        document.getElementById('masterFilterBtn').onclick = () => {
-            masterFilterEnabled = !masterFilterEnabled;
-            document.getElementById('masterFilterCircle').style.left = masterFilterEnabled ? '28px' : '4px';
-            document.getElementById('masterFilterBtn').className = masterFilterEnabled ? 'w-12 h-6 bg-amber-600 rounded-full relative' : 'w-12 h-6 bg-slate-700 rounded-full relative';
-            performSearch(document.getElementById('searchInput').value || 'Ishay Ribo');
-        };
+            reports.push({
+                id: s.trackId,
+                track: s.trackName,
+                artist: s.artistName,
+                art: s.artworkUrl100,
+                date: new Date().toLocaleDateString()
+            });
 
-        document.getElementById('strictModeBtn').onclick = () => {
-            strictWhitelistMode = !strictWhitelistMode;
-            document.getElementById('strictModeCircle').style.left = strictWhitelistMode ? '28px' : '4px';
-            document.getElementById('strictModeBtn').className = strictWhitelistMode ? 'w-12 h-6 bg-emerald-600 rounded-full relative' : 'w-12 h-6 bg-slate-700 rounded-full relative';
-            performSearch(document.getElementById('searchInput').value || 'Ishay Ribo');
-        };
+            localStorage.setItem('ks_reports', JSON.stringify(reports));
+            checkNotifs();
+            showToast("Report Submitted to Admin");
+        }
 
-        document.getElementById('externalLinksBtn').onclick = () => {
-            showExternalLinks = !showExternalLinks;
-            document.getElementById('externalLinksCircle').style.left = showExternalLinks ? '28px' : '4px';
-            document.getElementById('externalLinksBtn').className = showExternalLinks ? 'w-12 h-6 bg-amber-600 rounded-full relative' : 'w-12 h-6 bg-slate-700 rounded-full relative';
-            if (currentTrack) renderTrackDetails(currentTrack);
-        };
+        function checkNotifs() {
+            const dot = document.getElementById('admin-notif');
+            dot.style.display = reports.length > 0 ? 'block' : 'none';
+        }
 
-        document.getElementById('addWhitelistBtn').onclick = () => {
-            const v = document.getElementById('whitelistInput').value;
-            if(v) { whitelist.push(v); document.getElementById('whitelistInput').value=''; renderLists(); performSearch(document.getElementById('searchInput').value || 'Ishay Ribo'); }
-        };
-        document.getElementById('addBlacklistBtn').onclick = () => {
-            const v = document.getElementById('blacklistInput').value;
-            if(v) { blacklist.push(v); document.getElementById('blacklistInput').value=''; renderLists(); performSearch(document.getElementById('searchInput').value || 'Ishay Ribo'); }
-        };
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = '1';
+            t.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translate(-50%, 16px)';
+            }, 3000);
+        }
 
-        document.getElementById('savePinBtn').onclick = () => {
-            const p = document.getElementById('newPinInput').value;
-            if(p.length === 4) { adminPin = p; alert("PIN Updated"); }
-        };
+        function addArt() {
+            const val = document.getElementById('artIn').value;
+            if (!val) return;
+            if (activeAdminList === 'white') admin.white.push(val);
+            else admin.black.push(val);
+            save(); renderAdmin();
+            document.getElementById('artIn').value = '';
+            renderMusic('Jewish Music');
+        }
 
-        document.getElementById('openSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
-        document.getElementById('closeSettingsBtn').onclick = () => {
-            document.getElementById('settingsModal').classList.add('hidden');
-            document.getElementById('lockScreen').classList.remove('hidden');
-            document.getElementById('adminPanel').classList.add('hidden');
-            document.getElementById('pinInput').value = '';
-        };
-        document.getElementById('closeDetailsBtn').onclick = () => document.getElementById('detailsSidebar').classList.add('translate-x-full');
-        document.getElementById('volumeControl').oninput = (e) => audio.volume = e.target.value;
-        document.getElementById('progressContainer').onclick = (e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-        };
+        function remArt(n) {
+            if (activeAdminList === 'white') admin.white = admin.white.filter(x => x !== n);
+            else admin.black = admin.black.filter(x => x !== n);
+            save(); renderAdmin();
+            renderMusic('Jewish Music');
+        }
 
-        init();
+        function updMode(m) { 
+            admin.mode = m; 
+            save(); 
+            renderAdmin(); 
+            renderMusic('Jewish Music'); 
+        }
+        
+        function updLinks(l) { admin.links = l; save(); }
+
+        function saveSec() {
+            const p = document.getElementById('nPin').value;
+            const q = document.getElementById('nQuest').value;
+            const a = document.getElementById('nAns').value;
+            
+            let updated = false;
+            if (p) { admin.pin = p; updated = true; }
+            if (q) { admin.q = q; updated = true; }
+            if (a) { admin.a = a; updated = true; }
+            
+            if (updated) {
+                save();
+                showToast("Security Credentials Updated");
+                document.getElementById('nPin').value = '';
+                document.getElementById('nAns').value = '';
+            }
+        }
+
+        // --- Theater Mode ---
+        let theaterActive = false;
+        function toggleTheater() {
+            theaterActive = !theaterActive;
+            document.body.classList.toggle('theater-mode');
+            const btn = document.getElementById('theater-btn');
+            btn.classList.toggle('text-blue-500');
+            btn.classList.toggle('text-neutral-500');
+            
+            if(theaterActive) {
+                showToast("Theater Mode Active");
+            }
+        }
+
+        // --- Helper Logic ---
+
+        function toggleVizFeature(on) {
+            admin.viz = on;
+            save();
+            const cont = document.getElementById('viz-container');
+            on ? initVisualizer() : cont.classList.add('hidden');
+        }
+
+        function toggleLib(i) {
+            const s = currentSongs[i];
+            const idx = library.findIndex(x => x.trackId === s.trackId);
+            idx > -1 ? library.splice(idx, 1) : library.push(s);
+            localStorage.setItem('ks_lib', JSON.stringify(library));
+            displaySongs();
+        }
+
+        function setView(v) {
+            view = v;
+            if (v === 'library') { currentSongs = library; displaySongs(); }
+            else renderMusic('Jewish Music');
+        }
+
+        function setLayout(l) {
+            layout = l;
+            document.getElementById('lt-grid').className = l === 'grid' ? 'p-2 rounded-lg bg-neutral-800 text-white' : 'p-2 rounded-lg text-neutral-500';
+            document.getElementById('lt-list').className = l === 'list' ? 'p-2 rounded-lg bg-neutral-800 text-white' : 'p-2 rounded-lg text-neutral-500';
+            displaySongs();
+        }
+
+        function closeModal(id) { 
+            document.getElementById(id).classList.add('hidden');
+            if(id === 'adminGate') document.getElementById(id).classList.remove('flex');
+        }
+
+        function openSettings() { 
+            document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('vizToggle').checked = admin.viz;
+        }
+
+        function nextSong() { if (currentIndex < currentSongs.length - 1) playSong(currentIndex + 1); }
+        function prevSong() { if (currentIndex > 0) playSong(currentIndex - 1); }
+        function fmt(s) { if(!s) return "0:00"; const m = Math.floor(s/60); const sc = Math.floor(s%60); return `${m}:${sc<10?'0':''}${sc}`; }
+        function save() { localStorage.setItem('ks_adm', JSON.stringify(admin)); }
     </script>
 </body>
 </html>
